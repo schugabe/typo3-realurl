@@ -574,13 +574,19 @@ class UrlEncoder extends EncodeDecoderBase {
 		/** @var \TYPO3\CMS\Core\Utility\RootlineUtility $rootLineUtility */
 		$rootLine = $rootLineUtility->get();
 
+		$foundRootPageId = false;
 		// Skip from the root of the tree to the first level of pages
 		while (count($rootLine) !== 0) {
 			$page = array_pop($rootLine);
 			if ($page['uid'] == $this->rootPageId) {
+			    $foundRootPageId = true;
 				break;
 			}
 		}
+
+        if (!$foundRootPageId) {
+            throw new \RuntimeException('Configured rootPageId not on rootLine', 1506001361);
+        }
 
 		$languageExceptionUids = (string)$this->configuration->get('pagePath/languageExceptionUids');
 		$enableLanguageOverlay = ((int)$this->originalUrlParameters['L'] > 0) && (empty($languageExceptionUids) || !GeneralUtility::inList($languageExceptionUids, $this->sysLanguageUid));
@@ -976,7 +982,7 @@ class UrlEncoder extends EncodeDecoderBase {
 				$this->encodePathComponents();
 			}
 			catch (\Exception $exception) {
-				if ($exception->getCode() === 1343589451) {
+				if (($exception->getCode() === 1343589451) || ($exception->getCode() === 1506001361)) {
 					// Rootline failure: "Could not fetch page data for uid X"
 					// Reset and quit. See https://github.com/dmitryd/typo3-realurl/issues/200
 					$this->encodedUrl = $this->urlToEncode;
@@ -992,8 +998,14 @@ class UrlEncoder extends EncodeDecoderBase {
 			$this->addRemainingUrlParameters();
 
 			if ($this->encodedUrl === '') {
-				$emptyUrlReturnValue = $this->configuration->get('init/emptyUrlReturnValue') ?: '/';
-				$this->encodedUrl = $emptyUrlReturnValue;
+                if ($this->urlParameters['id'] == $this->rootPageId) {
+                    $emptyUrlReturnValue = $this->configuration->get('init/emptyUrlReturnValue') ?: '/';
+                    $this->encodedUrl = $emptyUrlReturnValue;
+                }
+                else {
+                    $this->encodedUrl = $this->urlToEncode;
+                    return;
+                }
 			}
 			$this->storeInUrlCache();
 		}
