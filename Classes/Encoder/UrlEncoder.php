@@ -1505,6 +1505,14 @@ class UrlEncoder extends EncodeDecoderBase {
 	 * @return void
 	 */
 	protected function storeInUrlCache() {
+	    if ($this->rootPageId == 0) {
+            sprintf(
+                'URL "%s" is resolved to rootPageId 0 for host %s',
+                $this->urlToEncode,
+                $this->utility->getCurrentHost()
+            );
+            return;
+        }
 		if ($this->canCacheUrl($this->originalUrl)) {
 			$cacheEntry = $this->cache->getUrlFromCacheByOriginalUrl($this->rootPageId, $this->originalUrl);
 			/** @var \DmitryDulepov\Realurl\Cache\UrlCacheEntry $cacheEntry */
